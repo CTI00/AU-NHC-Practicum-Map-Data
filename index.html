@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Housing Policy Map</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        #map {
+            height: 90vh;
+            width: 100%;
+        }
+        #controls {
+            padding: 10px;
+            background: white;
+        }
+        .legend {
+            background: white;
+            line-height: 1.5em;
+            padding: 6px 10px;
+            font-size: 14px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+        }
+        .legend i {
+            width: 18px;
+            height: 18px;
+            float: left;
+            margin-right: 8px;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+<div id="controls">
+    <label for="policy-select">Select a policy:</label>
+    <select id="policy-select">
+        <option value="ADU">ADU</option>
+        <option value="ARPA">ARPA</option>
+        <option value="Bond_Caps">Bond Caps</option>
+        <option value="CCD">CCD</option>
+        <option value="EAH">EAH</option>
+        <option value="HCV">HCV</option>
+        <option value="HTF">HTF</option>
+        <option value="Insurance">Insurance</option>
+        <option value="IZ">Inclusionary Zoning (IZ)</option>
+        <option value="LIHTC">LIHTC</option>
+        <option value="Major_Legi">Major Legislation</option>
+        <option value="MH">MH</option>
+        <option value="MMP">MMP</option>
+        <option value="P_H_Restri">P/H Restrictions</option>
+        <option value="Pilot">Pilot</option>
+        <option value="QC">QC</option>
+        <option value="Rent_Contr">Rent Control</option>
+        <option value="Tenant_Pro">Tenant Protections</option>
+        <option value="TribalA">Tribal Areas</option>
+        <option value="Zoning">Zoning</option>
+    </select>
+</div>
+<div id="map"></div>
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+<script>
+    const map = L.map('map').setView([39.8283, -98.5795], 4);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    let geojson;
+    const select = document.getElementById('policy-select');
+
+    function styleFeature(policy) {
+        return function(feature) {
+            const value = feature.properties[policy];
+            return {
+                fillColor: value && value != 0 ? '#FFD700' : '#ccc',
+                weight: 1,
+                color: 'black',
+                fillOpacity: 0.7
+            };
+        };
+    }
+
+    function updateMap(policy) {
+        if (geojson) {
+            geojson.remove();
+        }
+        geojson = L.geoJSON(window.housingData, {
+            style: styleFeature(policy),
+            onEachFeature: function(feature, layer) {
+                layer.bindPopup(`${feature.properties.NAME}<br>${policy}: ${feature.properties[policy]}`);
+            }
+        }).addTo(map);
+    }
+
+    select.addEventListener('change', function() {
+        updateMap(this.value);
+    });
+
+    // Load your GeoJSON file here
+    fetch('https://raw.githubusercontent.com/CTI00/AU-NHC-Practicum-Map-Data/refs/heads/main/housing_policiesAU.json')
+        .then(response => response.json())
+        .then(data => {
+            window.housingData = data;
+            updateMap(select.value);
+        });
+
+    // Legend
+    const legend = L.control({position: 'bottomright'});
+
+    legend.onAdd = function(map) {
+        const div = L.DomUtil.create('div', 'legend');
+        div.innerHTML += '<i style="background: #FFD700"></i> Yes<br>';
+        div.innerHTML += '<i style="background: #ccc"></i> No';
+        return div;
+    };
+
+    legend.addTo(map);
+</script>
+</body>
+</html>
